@@ -13,6 +13,7 @@ associated with. This allows us to determine transpose operations.
 
 """
 import numpy as np
+from functools import reduce
 
 cpdef list listify(thing):
     try:
@@ -54,7 +55,7 @@ class Key(object):
             subclasses must define this
 
         """
-        raise NotImplementedError, "subclasses must define this"
+        raise NotImplementedError("subclasses must define this")
 
     def __getitem__(self, key):
         """x.__getitem__(y) <==> x[y]
@@ -67,7 +68,7 @@ class Key(object):
             subclasses must define this
 
         """
-        raise NotImplementedError, "subclasses must define this"
+        raise NotImplementedError("subclasses must define this")
 
     def __repr__(self):
         return str(self)
@@ -84,7 +85,7 @@ class Key(object):
             subclasses must define this
 
         """
-        raise NotImplementedError, "subclasses must define this"
+        raise NotImplementedError("subclasses must define this")
 
     def get_size(self):
         """Returns number of elements represented by this Key.
@@ -94,7 +95,7 @@ class Key(object):
         size : Attribute getter for get_size method.
         
         """
-        raise NotImplementedError, "subclasses must define this"
+        raise NotImplementedError("subclasses must define this")
     size = property(get_size)
 
     def pyobj(self):
@@ -106,7 +107,7 @@ class Key(object):
             subclasses must define this
             
         """
-        raise NotImplementedError, "subclasses must define this"
+        raise NotImplementedError("subclasses must define this")
 
 class NoneKey(Key):
     """A None with additional Key methods.
@@ -141,12 +142,12 @@ class NoneKey(Key):
             else:
                 start,stop,step = key.start,key.stop,key.step
             if start != 0 or stop != 1 or step != 1:
-                raise IndexError, "bad slice for NoneKey: %s" % key
+                raise IndexError("bad slice for NoneKey: %s" % key)
             return self
         else:
             key = long(key)
             if key not in [0,0L]: # probably don't need '0' due to cast
-                raise IndexError, "index out of bounds"
+                raise IndexError("index out of bounds")
             return None # on purpose not self -- indicates index removal
 
     def __repr__(self):
@@ -157,7 +158,7 @@ class NoneKey(Key):
 
     def bound_by_lohi(self, lo, hi):
         """Always raises NotImplementedError."""
-        raise NotImplementedError, "bound_by_lohi nonsensical for NoneKey"
+        raise NotImplementedError("bound_by_lohi nonsensical for NoneKey")
 
     def get_size(self):
         """Always returns 1."""
@@ -215,7 +216,7 @@ class FixedKey(Key):
             cannot index a FixedKey
             
         """
-        raise IndexError, "cannot index a FixedKey"
+        raise IndexError("cannot index a FixedKey")
 
     def __int__(self):
         return int(self.value)
@@ -239,8 +240,8 @@ class FixedKey(Key):
             
         """
         if not (lo <= self.value < hi):
-            raise IndexError, "lo/hi out of bounds %s <= %s < %s" % (
-                    lo, self.value, hi)
+            raise IndexError("lo/hi out of bounds %s <= %s < %s" % (
+                    lo, self.value, hi))
         return self
 
     def get_size(self):
@@ -318,12 +319,12 @@ class RangeKey(Key):
             try:
                 key = long(key)
             except TypeError:
-                raise TypeError, ("long() argument must be a string or a "
+                raise TypeError("long() argument must be a string or a "
                         "number, not %s" % key)
             if key < 0:
                 key += self.size
             if key >= self.size or key < 0:
-                raise IndexError, "invalid index"
+                raise IndexError("invalid index")
             shifted = (key*self.step) + self.start
             if (self.step < 0 and shifted <= self.stop
                     or self.step > 0 and shifted >= self.stop):
@@ -363,7 +364,7 @@ class RangeKey(Key):
         new_stop = 0
         if self.step > 0:
             if self.start >= hi:
-                raise IndexError, "start >= hi (out of bounds)"
+                raise IndexError("start >= hi (out of bounds)")
             elif self.start >= lo: # start < hi is implied
                 new_start = self.start
             else: # start < lo < hi is implied
@@ -373,14 +374,14 @@ class RangeKey(Key):
                     guess += 1
                     new_start = guess*self.step + self.start
             if self.stop <= lo:
-                raise IndexError, "stop <= lo (out of bounds)"
+                raise IndexError("stop <= lo (out of bounds)")
             elif self.stop <= hi: # lo < stop is implied
                 new_stop = self.stop
             else: # lo < hi < stop is implied
                 new_stop = hi # this should be good enough
         else:
             if self.start < lo:
-                raise IndexError, "negative step, start < lo (out of bounds)"
+                raise IndexError("negative step, start < lo (out of bounds)")
             elif self.start < hi:
                 new_start = self.start
             else: # start >= hi >= lo
@@ -390,14 +391,14 @@ class RangeKey(Key):
                     guess += 1
                     new_start = guess*self.step + self.start
             if self.stop >= hi:
-                raise IndexError, "negative step, stop >= hi (out of bounds)"
+                raise IndexError("negative step, stop >= hi (out of bounds)")
             elif self.stop >= (lo-1):
                 new_stop = self.stop
             else:
                 new_stop = lo-1 # this should be good enough
         result = RangeKey(new_start,new_stop,self.step,self.origin)
         if result.size <= 0:
-            raise IndexError, "bound_by_lohi resulted in 0 length"
+            raise IndexError("bound_by_lohi resulted in 0 length")
         return result
 
     def get_size(self):
@@ -406,9 +407,9 @@ class RangeKey(Key):
         if (step < 0 and stop >= start) or (step > 0 and start >= stop):
             return 0
         elif step < 0:
-            return (stop - start + 1) / (step) + 1
+            return (stop - start + 1) // (step) + 1
         else:
-            return (stop - start - 1) / (step) + 1
+            return (stop - start - 1) // (step) + 1
     size = property(get_size)
 
     def pyobj(self):
@@ -431,7 +432,7 @@ class MasterKey(object):
     """
     def __init__(self, shape=None, data=None, fixed=None, T=None, TT=None):
         if shape is None and data is None:
-            raise ValueError, "specify either shape or data"
+            raise ValueError("specify either shape or data")
         elif shape is not None:
             self.data = [RangeKey(0,x,1,origin=i)
                     for i,x in enumerate(shape)]
@@ -440,7 +441,7 @@ class MasterKey(object):
                 assert isinstance(datum, Key)
             self.data = data
         else:
-            raise ValueError, "specify either shape or data"
+            raise ValueError("specify either shape or data")
         self.T = T
         self.TT = TT
         if fixed is None:
@@ -491,7 +492,7 @@ class MasterKey(object):
         iter_origins = iter(origins)
         for i in range(len(result)):
             if result[i] is None:
-                result[i] = iter_origins.next()
+                result[i] = next(iter_origins)
         return result
 
     def get_sorted_origin(self):
@@ -543,7 +544,7 @@ class MasterKey(object):
         ndim = self.ndim
         count_real_keys = len(key)-key.count(None)-key.count(Ellipsis)
         if count_real_keys > ndim:
-            raise IndexError, "invalid index %s[%s]" % (self,key)
+            raise IndexError("invalid index %s[%s]" % (self,key))
         # implicit Ellipsis at end of key if one wasn't given
         if Ellipsis not in key:
             key.append(Ellipsis)
@@ -568,10 +569,10 @@ class MasterKey(object):
         key_iter = iter(key)
         for item in self.data:
             if isinstance(item, (RangeKey,NoneKey)):
-                next_key = key_iter.next()
+                next_key = next(key_iter)
                 while next_key is None:
                     new_data.append(NoneKey())
-                    next_key = key_iter.next()
+                    next_key = next(key_iter)
                 result = item[next_key]
                 if isinstance(item, RangeKey) and isinstance(result, FixedKey):
                     # went from range to fixed, add to fixed keys
@@ -579,9 +580,9 @@ class MasterKey(object):
                 elif result is not None:
                     new_data.append(result)
             elif isinstance(item, FixedKey):
-                raise TypeError, "FixedKey found in MasterKey"
+                raise TypeError("FixedKey found in MasterKey")
             else:
-                raise TypeError, "unrecognized item in MasterKey"
+                raise TypeError("unrecognized item in MasterKey")
         # there might be some items left in the key_iter
         # the only valid items that can remain are None
         for next_key in key_iter:
@@ -622,9 +623,9 @@ class MasterKey(object):
             elif isinstance(item, NoneKey):
                 pass
             elif isinstance(item, FixedKey):
-                raise TypeError, "FixedKey found in MasterKey"
+                raise TypeError("FixedKey found in MasterKey")
             else:
-                raise TypeError, "unrecognized item in MasterKey"
+                raise TypeError("unrecognized item in MasterKey")
         return result
 
     def lohi_T(self):
@@ -686,7 +687,7 @@ class MasterKey(object):
                     sk.append(item.step)
                     ad.append(slice(0,None,None))
             else:
-                raise TypeError, "unhandled piece of MasterKey"
+                raise TypeError("unhandled piece of MasterKey")
         lo = np.asarray(lo, dtype=np.int64)
         hi = np.asarray(hi, dtype=np.int64)
         sk = np.asarray(sk, dtype=np.int64)
@@ -706,7 +707,7 @@ class MasterKey(object):
         iter_ranged_origin = iter(self.bound_by_lohi(lo, hi))
         for i in range(len(result)):
             if result[i] is None:
-                ranged = iter_ranged_origin.next()
+                ranged = next(iter_ranged_origin)
                 nlo = lo[ranged.origin]
                 start = ranged.start-nlo
                 stop = ranged.stop-nlo
@@ -721,16 +722,16 @@ class MasterKey(object):
         result = []
         for datum in self.data:
             if isinstance(datum, FixedKey):
-                raise TypeError, "FixedKey found in MasterKey"
+                raise TypeError("FixedKey found in MasterKey")
             elif isinstance(datum, RangeKey):
-                ro = iter_ranged_origin.next()
+                ro = next(iter_ranged_origin)
                 offset = RangeKey(
                         datum.start,ro.start,datum.step,datum.origin).size
                 result.append(slice(offset, offset+ro.size, 1))
             elif isinstance(datum, NoneKey):
                 result.append(slice(None,None,None))
             else:
-                raise ValueError, "MasterKey contained unknown object"
+                raise ValueError("MasterKey contained unknown object")
         return result
 
     def transpose(self, axes):
@@ -771,7 +772,7 @@ def broadcast_shape(first, second):
         if x is None: x = 1
         if y is None: y = 1
         if x != 1 and y != 1 and x != y:
-            raise ValueError, ("shape mismatch:"
+            raise ValueError("shape mismatch:"
                     " objects cannot be broadcast to a single shape")
         return max(x,y)
     return tuple(reversed(map(worker, reversed(first), reversed(second))))

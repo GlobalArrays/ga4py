@@ -15,7 +15,35 @@ import numpy as np
 cimport numpy as np
 from cpython.ref cimport Py_INCREF
 from cpython.ref cimport PyTypeObject
-import __builtin__
+import sys
+try:
+    import __builtin__
+except:
+    import builtins as __builtin__
+
+if sys.version_info.major < 3:
+    def b(x):
+        return str(x)
+    def s(x):
+        return str(x)
+    def isstr(s):
+        return isinstance(s, basestring)
+else:
+    import codecs
+    def isstr(s):
+        return isinstance(s, str)
+    def isbytes(s):
+        return isinstance(s, (bytes, bytearray))
+    def b(x):
+        if isstr(x):
+            return codecs.latin_1_encode(str(x))[0]
+        else:
+            return x
+    def s(x):
+        if isbytes(x):
+            return codecs.latin_1_decode(x)[0]
+        else:
+            return x
 
 DEF EXCLUSIVE = 0
 
@@ -80,7 +108,7 @@ def dtype(int gatype):
     """Converts the given GA type to a numpy dtype."""
     if gatype in _to_dtype:
         return _to_dtype[gatype]
-    raise ValueError, "%d was not a recognized GA type" % gatype
+    raise ValueError("%d was not a recognized GA type" % gatype)
 
 def inquire_dtype(int g_a):
     """Returns the numpy dtype of the given GA."""
@@ -171,14 +199,14 @@ cdef inline _lohi(int g_a, lo, hi):
         lo_nd = _inta64(lo)
         hi_nd = lo_nd+1
     elif lo is None and hi is not None:
-        raise ValueError, 'lo cannot be None if hi is None'
+        raise ValueError('lo cannot be None if hi is None')
     else: # lo and hi are not None
         lo_nd = _inta64(lo)
         hi_nd = _inta64(hi)
     if len(lo_nd) != ndim:
-        raise ValueError, 'len(lo_nd) != ndim; len(%s) != %s' % (lo_nd,ndim)
+        raise ValueError('len(lo_nd) != ndim; len(%s) != %s' % (lo_nd,ndim))
     if len(hi_nd) != ndim:
-        raise ValueError, 'len(hi_nd) != ndim; len(%s) != %s' % (hi_nd,ndim)
+        raise ValueError('len(hi_nd) != ndim; len(%s) != %s' % (hi_nd,ndim))
     # We must make a copy of hi_nd. If user passes in an ndarray, the
     # following "prep" operation will change the user's 'hi'.
     #hi_nd -= 1 # <----- don't do that!
@@ -200,7 +228,7 @@ cdef void* _convert_multiplier(int gtype, value,
     cdef float complex pfcv=1.0
     cdef double complex pdcv=1.0
     if value is None:
-        raise ValueError, "cannot convert None"
+        raise ValueError("cannot convert None")
     if gtype == C_INT:
         iv[0] = value
         return iv
@@ -230,7 +258,7 @@ cdef void* _convert_multiplier(int gtype, value,
         dcv[0].imag = pdcv.imag
         return dcv
     else:
-        raise TypeError, "type of g_a not recognized"
+        raise TypeError("type of g_a not recognized")
 
 def zip(lo, hi):
     """Transforms a GA lo,hi combination into a slice list."""
@@ -351,8 +379,8 @@ cdef _acc_common(int g_a, buffer, lo=None, hi=None, alpha=None,
         shape = (hi_nd-lo_nd)/skip_nd+1
     buffer_nd = np.asarray(buffer, dtype=dtype)
     if buffer_nd.dtype != dtype:
-        raise ValueError, "buffer is wrong type :: buffer=%s != %s" % (
-                buffer.dtype, dtype)
+        raise ValueError("buffer is wrong type :: buffer=%s != %s" % (
+                buffer.dtype, dtype))
     # Due to GA restrictions, buffer must not have negative strides
     # and buffer's last stride must be same as itemsize
     strides = [buffer_nd.strides[i]/buffer_nd.itemsize
@@ -363,14 +391,14 @@ cdef _acc_common(int g_a, buffer, lo=None, hi=None, alpha=None,
     # the requested region
     if buffer_nd.ndim == 1:
         if buffer_nd.size != np.prod(shape):
-            raise ValueError, ('buffer size does not match shape :: '
+            raise ValueError('buffer size does not match shape :: '
                     'buffer.size=%s != np.prod(shape)=%s' % (
                     buffer_nd.size, np.prod(shape)))
         ld_nd = shape[1:]
     else:
         buffer_shape = [buffer_nd.shape[i] for i in range(buffer_nd.ndim)]
         if not np.all(buffer_shape == shape):
-            raise ValueError, ('buffer shape does not match request shape :: '
+            raise ValueError('buffer shape does not match request shape :: '
                     'buffer_shape=%s != shape=%s' % (
                     buffer_shape, shape))
         ld_nd = np.asarray([strides[i]/strides[i+1]
@@ -481,11 +509,11 @@ def access(int g_a, lo=None, hi=None, int proc=-1):
             hi_nd = hi_dst
         # sanity checks
         if np.sometrue(lo_nd>hi_nd):
-            raise ValueError,"lo>hi lo=%s hi=%s"%(lo_nd,hi_nd)
+            raise ValueError("lo>hi lo=%s hi=%s"%(lo_nd,hi_nd))
         if np.sometrue(lo_nd<lo_dst):
-            raise ValueError,"lo out of bounds lo_dst=%s lo=%s"%(lo_dst,lo_nd)
+            raise ValueError("lo out of bounds lo_dst=%s lo=%s"%(lo_dst,lo_nd))
         if np.sometrue(hi_nd>hi_dst):
-            raise ValueError,"hi out of bounds hi_dst=%s hi=%s"%(hi_dst,hi_nd)
+            raise ValueError("hi out of bounds hi_dst=%s hi=%s"%(hi_dst,hi_nd))
         slices = []
         for i in range(dimlen):
             slices.append(slice(lo_nd[i]-lo_dst[i],hi_nd[i]-lo_dst[i]))
@@ -619,7 +647,7 @@ def access_ghost_element(int g_a, subscript):
     :returns: ndarray scalar representing local block
 
     """
-    raise NotImplementedError, "use access_ghosts(g_a) instead"
+    raise NotImplementedError("use access_ghosts(g_a) instead")
 
 def access_ghosts(int g_a):
     """Returns ndarray representing local patch with ghost cells.
@@ -832,13 +860,13 @@ def brdcst(buffer, int root=0):
     cdef np.ndarray buffer_nd
     buffer_nd = np.asarray(buffer)
     if not buffer_nd.flags['C_CONTIGUOUS']:
-        raise ValueError, "the buffer must be contiguous"
+        raise ValueError("the buffer must be contiguous")
     #if buffer_nd.ndim != 1:
-    #    raise ValueError, "the buffer must be one-dimensional"
+    #    raise ValueError("the buffer must be one-dimensional")
     GA_Brdcst(buffer_nd.data, buffer_nd.size*buffer_nd.itemsize, root)
     return buffer_nd
 
-def check_handle(int g_a, char *message):
+def check_handle(int g_a, message):
     """Checks that the array handle g_a is valid.
     
     If not, calls ga.error withe the provided string.
@@ -846,7 +874,7 @@ def check_handle(int g_a, char *message):
     This operation is local.
 
     """
-    GA_Check_handle(g_a, message)
+    GA_Check_handle(g_a, b(message))
 
 def cluster_nnodes():
     """Returns the total number of nodes that the program is running on.
@@ -965,7 +993,7 @@ def copy(int g_a, int g_b, alo=None, ahi=None, blo=None, bhi=None,
                 g_a, <int64_t*>alo_nd.data, <int64_t*>ahi_nd.data,
                 g_b, <int64_t*>blo_nd.data, <int64_t*>bhi_nd.data)
 
-def create(int gtype, dims, char *name="", chunk=None, int pgroup=-1):
+def create(int gtype, dims, name="", chunk=None, int pgroup=-1):
     """Creates an n-dimensional array using the regular distribution model.
 
     The array can be distributed evenly or not. The control over the
@@ -1005,12 +1033,12 @@ def create(int gtype, dims, char *name="", chunk=None, int pgroup=-1):
     if chunk:
         chunk_nd = _inta64(chunk)
         return NGA_Create_config64(gtype, len(dims_nd), <int64_t*>dims_nd.data,
-                name, <int64_t*>chunk_nd.data, pgroup)
+                b(name), <int64_t*>chunk_nd.data, pgroup)
     else:
         return NGA_Create_config64(gtype, len(dims_nd), <int64_t*>dims_nd.data,
-                name, NULL, pgroup)
+                b(name), NULL, pgroup)
 
-def create_ghosts(int gtype, dims, width, char *name="", chunk=None,
+def create_ghosts(int gtype, dims, width, name="", chunk=None,
         int pgroup=-1):
     """Creates an array with a layer of ghost cells around the visible data.
 
@@ -1055,11 +1083,11 @@ def create_ghosts(int gtype, dims, width, char *name="", chunk=None,
     if chunk:
         chunk_nd = _inta64(chunk)
         return NGA_Create_ghosts_config64(gtype, len(dims_nd),
-                <int64_t*>dims_nd.data, <int64_t*>width_nd.data, name,
+                <int64_t*>dims_nd.data, <int64_t*>width_nd.data, b(name),
                 <int64_t*>chunk_nd.data, pgroup)
     else:
         return NGA_Create_ghosts_config64(gtype, len(dims_nd),
-                <int64_t*>dims_nd.data, <int64_t*>width_nd.data, name,
+                <int64_t*>dims_nd.data, <int64_t*>width_nd.data, b(name),
                 NULL, pgroup)
 
 def create_handle():
@@ -1077,7 +1105,7 @@ def create_handle():
     """
     return GA_Create_handle()
 
-def create_irreg(int gtype, dims, block, map, char *name="", int pgroup=-1):
+def create_irreg(int gtype, dims, block, map, name="", int pgroup=-1):
     """Creates an array by following the user-specified distribution.
 
     The distribution is specified as a Cartesian product of distributions for
@@ -1115,10 +1143,10 @@ def create_irreg(int gtype, dims, block, map, char *name="", int pgroup=-1):
     if pgroup < 0:
         pgroup = pgroup_get_default()
     return NGA_Create_irreg_config64(gtype, len(dims_nd),
-            <int64_t*>dims_nd.data, name,
+            <int64_t*>dims_nd.data, b(name),
             <int64_t*>block_nd.data, <int64_t*>map_nd.data, pgroup)
 
-def create_ghosts_irreg(int gtype, dims, width, block, map, char *name="",
+def create_ghosts_irreg(int gtype, dims, width, block, map, name="",
         int pgroup=-1):
     """Creates an array with a layer of ghost cells around the visible data.
 
@@ -1165,7 +1193,7 @@ def create_ghosts_irreg(int gtype, dims, width, block, map, char *name="",
     if pgroup < 0:
         pgroup = pgroup_get_default()
     return NGA_Create_ghosts_irreg_config64(gtype, len(dims_nd),
-            <int64_t*>dims_nd.data, <int64_t*>width_nd.data, name,
+            <int64_t*>dims_nd.data, <int64_t*>width_nd.data, b(name),
             <int64_t*>block_nd.data, <int64_t*>map_nd.data, pgroup)
 
 def create_mutexes(int number):
@@ -1431,7 +1459,7 @@ def dot(int g_a, int g_b, alo=None, ahi=None, blo=None, bhi=None,
         else:
             raise TypeError
     
-def duplicate(int g_a, char *name=""):
+def duplicate(int g_a, name=""):
     """Creates a new array by applying all the properties of another existing
     array.
     
@@ -1446,7 +1474,7 @@ def duplicate(int g_a, char *name=""):
     This is a collective operation. 
 
     """
-    return GA_Duplicate(g_a, name)
+    return GA_Duplicate(g_a, b(name))
 
 def elem_divide(int g_a, int g_b, int g_c, alo=None, ahi=None, blo=None,
         bhi=None, clo=None, chi=None):
@@ -1658,9 +1686,9 @@ def elem_multiply(int g_a, int g_b, int g_c, alo=None, ahi=None, blo=None,
                 g_b, <int64_t*>blo_nd.data, <int64_t*>bhi_nd.data,
                 g_c, <int64_t*>clo_nd.data, <int64_t*>chi_nd.data)
 
-def error(char *message, int code=1):
+def error(message, int code=1):
     """Prints message and aborts safely with code."""
-    GA_Error(message, code)
+    GA_Error(b(message), code)
 
 def fence():
     """Blocks the calling process until all the data transfers corresponding
@@ -1766,17 +1794,17 @@ def gather(int g_a, subsarray, np.ndarray values=None):
             subsarray2_nd = np.ascontiguousarray(subsarray, dtype=np.int64)
             n = len(subsarray2_nd) # length of first dimension of subsarray2_nd
         except ValueError:
-            raise ValueError, "subsarray must be either 1- or 2-dimensional"
+            raise ValueError("subsarray must be either 1- or 2-dimensional")
     # prepare values array
     if values is None:
         values = np.ndarray(n, dtype=_to_dtype[gtype])
     else:
         if values.ndim != 1:
-            raise ValueError, "values must be one-dimensional"
+            raise ValueError("values must be one-dimensional")
         if not values.flags['C_CONTIGUOUS']:
-            raise ValueError, "values must be contiguous"
+            raise ValueError("values must be contiguous")
         if len(values) < n:
-            raise ValueError, "values was not large enough"
+            raise ValueError("values was not large enough")
     # call the wrapped function
     if subsarray1_nd is not None:
         NGA_Gather_flat64(g_a, <void*>values.data,
@@ -1785,7 +1813,7 @@ def gather(int g_a, subsarray, np.ndarray values=None):
         NGA_Gather_flat64(g_a, <void*>values.data,
                 <int64_t*>subsarray2_nd.data, n)
     else:
-        raise ValueError, "how did this happen?"
+        raise ValueError("how did this happen?")
     return values
 
 def gemm(bint ta, bint tb, int64_t m, int64_t n, int64_t k,
@@ -1848,11 +1876,11 @@ def gemm(bint ta, bint tb, int64_t m, int64_t n, int64_t k,
     if tb:
         tb_char = 'T'
     if gtype == C_INT:
-        raise TypeError, "C_INT not supported"
+        raise TypeError("C_INT not supported")
     elif gtype == C_LONG:
-        raise TypeError, "C_LONG not supported"
+        raise TypeError("C_LONG not supported")
     elif gtype == C_LONGLONG:
-        raise TypeError, "C_LONGLONG not supported"
+        raise TypeError("C_LONGLONG not supported")
     elif gtype == C_FLOAT:
         falpha = alpha
         fbeta = beta
@@ -1862,7 +1890,7 @@ def gemm(bint ta, bint tb, int64_t m, int64_t n, int64_t k,
         dbeta = beta
         GA_Dgemm64(ta_char, tb_char, m, n, k, dalpha, g_a, g_b, dbeta, g_c)
     elif gtype == C_LDBL:
-        raise TypeError, "C_LDBL not supported"
+        raise TypeError("C_LDBL not supported")
     elif gtype == C_SCPL:
         fcalpha = alpha
         fcbeta = beta
@@ -1880,7 +1908,7 @@ def gemm(bint ta, bint tb, int64_t m, int64_t n, int64_t k,
         ga_dcbeta.imag = dcbeta.imag
         GA_Zgemm64(ta_char, tb_char, m, n, k, ga_dcalpha, g_a, g_b, ga_dcbeta, g_c)
     elif gtype == C_LDCPL:
-        raise TypeError, "C_LDCPL not supported (yet)"
+        raise TypeError("C_LDCPL not supported (yet)")
     else:
         raise TypeError
 
@@ -1954,27 +1982,27 @@ cdef _get_common(int g_a, lo=None, hi=None, np.ndarray buffer=None,
     if buffer is None:
         buffer = np.ndarray(shape, dtype=dtype)
     elif buffer.dtype != dtype:
-        raise ValueError, "buffer is wrong type :: buffer=%s != %s" % (
-                buffer.dtype, dtype)
+        raise ValueError("buffer is wrong type :: buffer=%s != %s" % (
+                buffer.dtype, dtype))
     # Due to GA restrictions, buffer must not have negative strides
     # and buffer's last stride must be same as itemsize
     strides = [buffer.strides[i]/buffer.itemsize for i in range(buffer.ndim)]
     if strides[-1] != 1:
-        raise ValueError, "first dimension of buffer cannot be strided"
+        raise ValueError("first dimension of buffer cannot be strided")
     if np.any(np.asarray(strides) < 0):
-        raise ValueError, "buffer cannot have negative strides"
+        raise ValueError("buffer cannot have negative strides")
     # we allow 1-d "flat" buffers in addition to buffers matching the shape of
     # requested region
     if buffer.ndim == 1:
         if buffer.size != np.prod(shape):
-            raise ValueError, ('buffer size does not match shape :: '
+            raise ValueError('buffer size does not match shape :: '
                     'buffer.size=%s != np.prod(shape)=%s' % (
                     buffer.size, np.prod(shape)))
         ld_nd = shape[1:]
     else:
         buffer_shape = [buffer.shape[i] for i in range(buffer.ndim)]
         if not np.all(buffer_shape == shape):
-            raise ValueError, ('buffer shape does not match request shape :: '
+            raise ValueError('buffer shape does not match request shape :: '
                     'buffer_shape=%s != shape=%s' % (
                     buffer_shape, shape))
         ld_nd = np.asarray([strides[i]/strides[i+1]
@@ -2042,7 +2070,7 @@ def get_debug():
     """
     return GA_Get_debug()
 
-def gop(X, char *op):
+def gop(X, op):
     """Global operation.
 
     X(1:N) is a vector present on each process. gop 'sums' elements of X
@@ -2065,27 +2093,27 @@ def gop(X, char *op):
     cdef np.ndarray X_nd = np.asarray(X)
     cdef int size = 0
     if not X_nd.flags['C_CONTIGUOUS']:
-        raise ValueError, "X must be contiguous"
+        raise ValueError("X must be contiguous")
     try:
         size = len(X_nd)
     except TypeError:
         size = 1
     if X_nd.dtype == np.dtype(np.intc):
-        GA_Igop(<int*>X_nd.data, size, op)
+        GA_Igop(<int*>X_nd.data, size, b(op))
     elif X_nd.dtype == np.dtype(np.long):
-        GA_Lgop(<long*>X_nd.data, size, op)
+        GA_Lgop(<long*>X_nd.data, size, b(op))
     elif X_nd.dtype == np.dtype(np.longlong):
-        GA_Llgop(<long long*>X_nd.data, size, op)
+        GA_Llgop(<long long*>X_nd.data, size, b(op))
     elif X_nd.dtype == np.dtype(np.single):
-        GA_Fgop(<float*>X_nd.data, size, op)
+        GA_Fgop(<float*>X_nd.data, size, b(op))
     elif X_nd.dtype == np.dtype(np.double):
-        GA_Dgop(<double*>X_nd.data, size, op)
+        GA_Dgop(<double*>X_nd.data, size, b(op))
     elif X_nd.dtype == np.dtype(np.complex64):
-        GA_Cgop(<SingleComplex*>X_nd.data, size, op)
+        GA_Cgop(<SingleComplex*>X_nd.data, size, b(op))
     elif X_nd.dtype == np.dtype(np.complex128):
-        GA_Zgop(<DoubleComplex*>X_nd.data, size, op)
+        GA_Zgop(<DoubleComplex*>X_nd.data, size, b(op))
     else:
-        raise TypeError, "type not supported by ga.gop %s" % X_nd.dtype
+        raise TypeError("type not supported by ga.gop %s" % X_nd.dtype)
     return X_nd
 
 def gop_add(X):
@@ -2198,7 +2226,7 @@ def inquire_name(int g_a):
             the array handle
 
     """
-    return GA_Inquire_name(g_a)
+    return s(GA_Inquire_name(g_a))
 
 cpdef int inquire_type(int g_a):
     cdef int gtype
@@ -2955,9 +2983,9 @@ def pgroup_brdcst(int pgroup, buffer, int root=0):
     cdef np.ndarray buffer_nd
     buffer_nd = np.asarray(buffer)
     if not buffer_nd.flags['C_CONTIGUOUS']:
-        raise ValueError, "the buffer must be contiguous"
+        raise ValueError("the buffer must be contiguous")
     #if buffer_nd.ndim != 1:
-    #    raise ValueError, "the buffer must be one-dimensional"
+    #    raise ValueError("the buffer must be one-dimensional")
     GA_Pgroup_brdcst(pgroup, buffer_nd.data,
             buffer_nd.size*buffer_nd.itemsize, root)
     return buffer_nd
@@ -3024,7 +3052,7 @@ def pgroup_get_world():
     """
     return GA_Pgroup_get_world()
 
-def pgroup_gop(int pgroup, X, char *op):
+def pgroup_gop(int pgroup, X, op):
     """Global operation.
 
     X(1:N) is a vector present on each process in the group. gop 'sums'
@@ -3046,23 +3074,23 @@ def pgroup_gop(int pgroup, X, char *op):
     """
     cdef np.ndarray X_nd = np.asarray(X)
     if not X_nd.flags['C_CONTIGUOUS']:
-        raise ValueError, "X must be contiguous"
+        raise ValueError("X must be contiguous")
     if X_nd.dtype == np.intc:
-        GA_Pgroup_igop(pgroup, <int*>X_nd.data, len(X_nd), op)
+        GA_Pgroup_igop(pgroup, <int*>X_nd.data, len(X_nd), b(op))
     elif X_nd.dtype == np.long:
-        GA_Pgroup_lgop(pgroup, <long*>X_nd.data, len(X_nd), op)
+        GA_Pgroup_lgop(pgroup, <long*>X_nd.data, len(X_nd), b(op))
     elif X_nd.dtype == np.longlong:
-        GA_Pgroup_llgop(pgroup, <long long*>X_nd.data, len(X_nd), op)
+        GA_Pgroup_llgop(pgroup, <long long*>X_nd.data, len(X_nd), b(op))
     elif X_nd.dtype == np.single:
-        GA_Pgroup_fgop(pgroup, <float*>X_nd.data, len(X_nd), op)
+        GA_Pgroup_fgop(pgroup, <float*>X_nd.data, len(X_nd), b(op))
     elif X_nd.dtype == np.double:
-        GA_Pgroup_dgop(pgroup, <double*>X_nd.data, len(X_nd), op)
+        GA_Pgroup_dgop(pgroup, <double*>X_nd.data, len(X_nd), b(op))
     elif X_nd.dtype == np.complex64:
-        GA_Pgroup_cgop(pgroup, <SingleComplex*>X_nd.data, len(X_nd), op)
+        GA_Pgroup_cgop(pgroup, <SingleComplex*>X_nd.data, len(X_nd), b(op))
     elif X_nd.dtype == np.complex128:
-        GA_Pgroup_zgop(pgroup, <DoubleComplex*>X_nd.data, len(X_nd), op)
+        GA_Pgroup_zgop(pgroup, <DoubleComplex*>X_nd.data, len(X_nd), b(op))
     else:
-        raise TypeError, "type not supported by ga.pgroup_gop %s" % X_nd.dtype
+        raise TypeError("type not supported by ga.pgroup_gop %s" % X_nd.dtype)
     return X_nd
 
 def pgroup_gop_add(int pgroup, X):
@@ -3307,8 +3335,8 @@ cdef _put_common(int g_a, buffer, lo=None, hi=None,
         shape = (hi_nd-lo_nd)/skip_nd+1
     buffer_nd = np.asarray(buffer, dtype=dtype)
     if buffer_nd.dtype != dtype:
-        raise ValueError, "buffer is wrong type :: buffer=%s != %s" % (
-                buffer.dtype, dtype)
+        raise ValueError("buffer is wrong type :: buffer=%s != %s" % (
+                buffer.dtype, dtype))
     # Due to GA restrictions, buffer must not have negative strides
     # and buffer's last stride must be same as itemsize
     strides = [buffer_nd.strides[i]/buffer_nd.itemsize
@@ -3319,14 +3347,14 @@ cdef _put_common(int g_a, buffer, lo=None, hi=None,
     # the requested region
     if buffer_nd.ndim == 1:
         if buffer_nd.size != np.prod(shape):
-            raise ValueError, ('buffer size does not match shape :: '
+            raise ValueError('buffer size does not match shape :: '
                     'buffer.size=%s != np.prod(shape)=%s' % (
                     buffer_nd.size, np.prod(shape)))
         ld_nd = shape[1:]
     else:
         buffer_shape = [buffer_nd.shape[i] for i in range(buffer_nd.ndim)]
         if not np.all(buffer_shape == shape):
-            raise ValueError, ('buffer shape does not match request shape :: '
+            raise ValueError('buffer shape does not match request shape :: '
                     'buffer_shape=%s != shape=%s' % (
                     buffer_shape, shape))
         ld_nd = np.asarray([strides[i]/strides[i+1]
@@ -3489,11 +3517,11 @@ cdef _release_common(int g_a, lo, hi, bint update):
         hi_nd = hi_dst
     # sanity checks
     if np.sometrue(lo_nd>hi_nd):
-        raise ValueError,"lo>hi lo=%s hi=%s"%(lo_nd,hi_nd)
+        raise ValueError("lo>hi lo=%s hi=%s"%(lo_nd,hi_nd))
     if np.sometrue(lo_nd<lo_dst):
-        raise ValueError,"lo out of bounds lo_dst=%s lo=%s"%(lo_dst,lo_nd)
+        raise ValueError("lo out of bounds lo_dst=%s lo=%s"%(lo_dst,lo_nd))
     if np.sometrue(hi_nd>hi_dst):
-        raise ValueError,"hi out of bounds hi_dst=%s hi=%s"%(hi_dst,hi_nd)
+        raise ValueError("hi out of bounds hi_dst=%s hi=%s"%(hi_dst,hi_nd))
     if update:
         NGA_Release_update64(g_a, <int64_t*>lo_nd.data, <int64_t*>hi_nd.data)
     else:
@@ -3748,15 +3776,15 @@ def scatter(int g_a, values, subsarray):
             subsarray2_nd = np.ascontiguousarray(subsarray, dtype=np.int64)
             n = len(subsarray2_nd) # length of first dimension of subsarray2_nd
         except ValueError:
-            raise ValueError, "subsarray must be either 1- or 2-dimensional"
+            raise ValueError("subsarray must be either 1- or 2-dimensional")
     # prepare values array
     values_nd = np.asarray(values, dtype=_to_dtype[gtype])
     if values_nd.ndim != 1:
-        raise ValueError, "values must be one-dimensional"
+        raise ValueError("values must be one-dimensional")
     if not values_nd.flags['C_CONTIGUOUS']:
-        raise ValueError, "values must be contiguous"
+        raise ValueError("values must be contiguous")
     if len(values_nd) < n:
-        raise ValueError, "values was not large enough"
+        raise ValueError("values was not large enough")
     # call the wrapped function
     if subsarray1_nd is not None:
         NGA_Scatter_flat64(g_a, <void*>values_nd.data,
@@ -3765,7 +3793,7 @@ def scatter(int g_a, values, subsarray):
         NGA_Scatter_flat64(g_a, <void*>values_nd.data,
                 <int64_t*>subsarray2_nd.data, n)
     else:
-        raise ValueError, "how did this happen?"
+        raise ValueError("how did this happen?")
 
 def scatter_acc(int g_a, values, subsarray, alpha=None):
     """Scatters array elements from a global array into a local array.
@@ -3817,15 +3845,15 @@ def scatter_acc(int g_a, values, subsarray, alpha=None):
             subsarray2_nd = np.ascontiguousarray(subsarray, dtype=np.int64)
             n = len(subsarray2_nd) # length of first dimension of subsarray2_nd
         except ValueError:
-            raise ValueError, "subsarray must be either 1- or 2-dimensional"
+            raise ValueError("subsarray must be either 1- or 2-dimensional")
     # prepare values array
     values_nd = np.asarray(values, dtype=_to_dtype[gtype])
     if values_nd.ndim != 1:
-        raise ValueError, "values must be one-dimensional"
+        raise ValueError("values must be one-dimensional")
     if not values_nd.flags['C_CONTIGUOUS']:
-        raise ValueError, "values must be contiguous"
+        raise ValueError("values must be contiguous")
     if len(values_nd) < n:
-        raise ValueError, "values was not large enough"
+        raise ValueError("values was not large enough")
     # prepare alpha
     if alpha is None:
         alpha = 1
@@ -3841,9 +3869,9 @@ def scatter_acc(int g_a, values, subsarray, alpha=None):
         NGA_Scatter_acc_flat64(g_a, <void*>values_nd.data,
                 <int64_t*>subsarray2_nd.data, n, valpha)
     else:
-        raise ValueError, "how did this happen?"
+        raise ValueError("how did this happen?")
 
-def select_elem(int g_a, char *op):
+def select_elem(int g_a, op):
     """Returns the value and index for an element that is selected by the
     specified operator in a global array corresponding to g_a handle.
 
@@ -3868,7 +3896,7 @@ def select_elem(int g_a, char *op):
             &falpha,  &dalpha,  &ldalpha,
             &fcalpha, &dcalpha)
     index = np.ndarray(GA_Ndim(g_a), dtype=np.int64)
-    NGA_Select_elem64(g_a, op, valpha, <int64_t*>index.data)
+    NGA_Select_elem64(g_a, b(op), valpha, <int64_t*>index.data)
     if gtype == C_INT:
         return ialpha,index
     elif gtype == C_LONG:
@@ -3888,7 +3916,7 @@ def select_elem(int g_a, char *op):
         # TODO explicitly convert GA complex to Python complex type
         return dcalpha,index
     else:
-        raise TypeError, "type of g_a not recognized"
+        raise TypeError("type of g_a not recognized")
 
 def select_elem_min(int g_a):
     """Equivalent to ga.select_elem(g_a, "min")."""
@@ -3898,14 +3926,14 @@ def select_elem_max(int g_a):
     """Equivalent to ga.select_elem(g_a, "max")."""
     return select_elem(g_a, "max")
 
-def set_array_name(int g_a, char *name):
+def set_array_name(int g_a, name):
     """Assigns a unique character string name to a global array handle that
     was obtained using the GA_Create_handle function.
 
     This is a collective operation.
 
     """
-    GA_Set_array_name(g_a, name)
+    GA_Set_array_name(g_a, b(name))
 
 def set_block_cyclic(int g_a, dims):
     """Creates a global array with a simple block-cyclic data distribution.

@@ -1,6 +1,7 @@
 import os
 from subprocess import Popen, PIPE
 import sys
+import codecs
 
 from distutils.core import setup
 from distutils.extension import Extension
@@ -11,48 +12,73 @@ from distutils.sysconfig import get_config_vars
 try:
     import numpy
 except ImportError:
-    print "numpy is required"
+    print("numpy is required")
     raise
 
 # mpi4py is required -- attempt import
 try:
     import mpi4py
 except ImportError:
-    print "mpi4py is required"
+    print("mpi4py is required")
     raise
 
 # cython is optional -- attempt import
 use_cython = False
 try:
     from Cython.Build import cythonize
-    from Cython.Distutils import build_ext
+    #from Cython.Distutils import build_ext
     use_cython = True
 except:
     pass
 
+if sys.version_info.major < 3:
+    def b(x):
+        return str(x)
+    def s(x):
+        return str(x)
+    def isstr(s):
+        return isinstance(s, basestring)
+else:
+    import codecs
+    def isstr(s):
+        return isinstance(s, str)
+    def isbytes(s):
+        return isinstance(s, (bytes, bytearray))
+    def b(x):
+        if isstr(x):
+            return codecs.latin_1_encode(str(x))[0]
+        else:
+            return x
+    def s(x):
+        if isbytes(x):
+            return codecs.latin_1_decode(x)[0]
+        else:
+            return x
+
 # need to find 'ga-config' to gather how GA was configured
 ga_config = find_executable("ga-config", None)
 if not ga_config:
-    raise ValueError, "ga-config not found in path -- required"
-p = Popen("%s --cc" % ga_config, shell=True, stdout=PIPE, stderr=PIPE,
-        close_fds=True)
-ga_cc,ignore = p.communicate()
-p = Popen("%s --cppflags" % ga_config, shell=True, stdout=PIPE, stderr=PIPE,
-        close_fds=True)
-ga_cppflags,ignore = p.communicate()
-p = Popen("%s --ldflags" % ga_config, shell=True, stdout=PIPE, stderr=PIPE,
-        close_fds=True)
-ga_ldflags,ignore = p.communicate()
-p = Popen("%s --libs" % ga_config, shell=True, stdout=PIPE, stderr=PIPE,
-        close_fds=True)
-ga_clibs,ignore = p.communicate()
+    raise ValueError("ga-config not found in path -- required")
+p = Popen("%s --cc" % ga_config, shell=True, stdout=PIPE, stderr=PIPE, close_fds=True)
+ga_cc, ignore = p.communicate()
+p = Popen("%s --cppflags" % ga_config, shell=True, stdout=PIPE, stderr=PIPE, close_fds=True)
+ga_cppflags, ignore = p.communicate()
+p = Popen("%s --ldflags" % ga_config, shell=True, stdout=PIPE, stderr=PIPE, close_fds=True)
+ga_ldflags, ignore = p.communicate()
+p = Popen("%s --libs" % ga_config, shell=True, stdout=PIPE, stderr=PIPE, close_fds=True)
+ga_clibs, ignore = p.communicate()
+
+ga_cc = s(ga_cc)
+ga_cppflags = s(ga_cppflags)
+ga_ldflags = s(ga_ldflags)
+ga_clibs = s(ga_clibs)
 
 if 'CC' not in os.environ:
     os.environ['CC'] = ga_cc
 if 'LDSHARED' not in os.environ:
     # take a lucky guess and reuse the same flags Python used
     flags = get_config_vars('LDSHARED')[0].strip().split()
-    assert(flags)
+    assert flags
     flags[0] = ga_cc
     os.environ['LDSHARED'] = ' '.join(flags)
 if 'ARCHFLAGS' not in os.environ:
@@ -68,29 +94,29 @@ if 'Accelerate' in ga_clibs or 'vecLib' in ga_clibs:
     linalg_include = []
     if os.path.exists(path):
         linalg_library = [path]
-        linalg_lib = ["LAPACK","BLAS"]
+        linalg_lib = ["LAPACK", "BLAS"]
     # remove '-framework Accelerate' from flags
-    ga_clibs = ga_clibs.replace("-framework","")
-    ga_clibs = ga_clibs.replace("Accelerate","")
-    ga_clibs = ga_clibs.replace("vecLib","")
+    ga_clibs = ga_clibs.replace("-framework", "")
+    ga_clibs = ga_clibs.replace("Accelerate", "")
+    ga_clibs = ga_clibs.replace("vecLib", "")
 
 include_dirs = [numpy.get_include(), mpi4py.get_include()]
 library_dirs = []
 libraries = []
 
 # add the GA stuff
-for dir in ga_cppflags.split():
-    dir = dir.strip()
-    include_dirs.append(dir.replace("-I",""))
-for dir in ga_ldflags.split():
-    dir = dir.strip()
-    library_dirs.append(dir.replace("-L",""))
+for part in ga_cppflags.split():
+    part = part.strip()
+    include_dirs.append(part.replace("-I", ""))
+for part in ga_ldflags.split():
+    part = part.strip()
+    library_dirs.append(part.replace("-L", ""))
 for part in ga_clibs.split():
     part = part.strip()
     if '-L' in part:
-        library_dirs.append(part.replace("-L",""))
+        library_dirs.append(part.replace("-L", ""))
     elif '-l' in part:
-        libraries.append(part.replace("-l",""))
+        libraries.append(part.replace("-l", ""))
 
 include_dirs.extend(linalg_include)
 library_dirs.extend(linalg_library)
@@ -165,8 +191,8 @@ else:
     cmdclass = {}
 
 setup(
-    name = "Global Arrays",
-    packages = ["ga4py","ga4py.gain"],
-    ext_modules = ext_modules,
-    cmdclass = cmdclass
+    name="Global Arrays",
+    packages=["ga4py", "ga4py.gain"],
+    ext_modules=ext_modules,
+    cmdclass=cmdclass
 )

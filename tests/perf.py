@@ -20,7 +20,7 @@ def main():
     test2D()
     test1D()
     if 0 == me:
-        print 'All tests successful'
+        print('All tests successful')
 
 def test2D():
     n = 1024
@@ -32,8 +32,8 @@ def test2D():
     buf[:] = 0.01
     ga.zero(g_a)
     if 0 == me:
-        print (' Performance of GA get, put & acc'
-                ' for square sections of array[%d,%d]' % (n,n))
+        print((' Performance of GA get, put & acc'
+                ' for square sections of array[%d,%d]' % (n,n)))
     lo,hi = ga.distribution(g_a, me)
     # local ops
     TestPutGetAcc(g_a, n, chunk, buf, lo, hi, True)
@@ -42,14 +42,14 @@ def test2D():
 
 def TestPutGetAcc(g_a, n, chunk, buf, lo, hi, local):
     if 0 == me:
-        print ''
+        print('')
         if local:
-            print 'Local 2-D Array Section'
+            print('Local 2-D Array Section')
         else:
-            print 'Remote 2-D Array Section'
-        print '%15s %19s %19s %19s' % ('section', 'get', 'put', 'accumulate')
-        print '%7s %7s %9s %9s %9s %9s %9s %9s' % (
-                'bytes','dim','usec','MB/s','usec','MB/s','usec','MB/s')
+            print('Remote 2-D Array Section')
+        print('%15s %19s %19s %19s' % ('section', 'get', 'put', 'accumulate'))
+        print('%7s %7s %9s %9s %9s %9s %9s %9s' % (
+                'bytes','dim','usec','MB/s','usec','MB/s','usec','MB/s'))
     ga.sync()
     bytes = 0
     jump = 0
@@ -81,11 +81,11 @@ def TestPutGetAcc(g_a, n, chunk, buf, lo, hi, local):
         else:
             time.sleep(1)
         if 0 == me:
-            print '%7d %7d %8.3e %8.3e %8.3e %8.3e %8.3e %8.3e' % (
+            print('%7d %7d %8.3e %8.3e %8.3e %8.3e %8.3e %8.3e' % (
                     bytes, chunk[loop],
                     tg/1e-6, 1e-6*bytes/tg,
                     tp/1e-6, 1e-6*bytes/tp,
-                    ta/1e-6, 1e-6*bytes/ta)
+                    ta/1e-6, 1e-6*bytes/ta))
 
 def time_get(g_a, lo, hi, buf, chunk, jump, local):
     count = 0
@@ -176,11 +176,11 @@ def test1D():
     buf[:] = 0.01
     ga.zero(g_a)
     if 0 == me:
-        print ''
-        print ''
-        print ''
-        print (' Performance of GA get, put & acc'
-                ' for 1-dimensional sections of array[%d]' % n)
+        print('')
+        print('')
+        print('')
+        print((' Performance of GA get, put & acc'
+                ' for 1-dimensional sections of array[%d]' % n))
     lo,hi = ga.distribution(g_a, me)
     # local ops
     TestPutGetAcc1(g_a, n, chunk, buf, lo, hi, True)
@@ -189,14 +189,14 @@ def test1D():
 
 def TestPutGetAcc1(g_a, n, chunk, buf, lo, hi, local):
     if 0 == me:
-        print ''
+        print('')
         if local:
-            print 'Local 1-D Array Section'
+            print('Local 1-D Array Section')
         else:
-            print 'Remote 1-D Array Section'
-        print '%15s %19s %19s %19s' % ('section', 'get', 'put', 'accumulate')
-        print '%7s %7s %9s %9s %9s %9s %9s %9s' % (
-                'bytes','dim','usec','MB/s','usec','MB/s','usec','MB/s')
+            print('Remote 1-D Array Section')
+        print('%15s %19s %19s %19s' % ('section', 'get', 'put', 'accumulate'))
+        print('%7s %7s %9s %9s %9s %9s %9s %9s' % (
+                'bytes','dim','usec','MB/s','usec','MB/s','usec','MB/s'))
     ga.sync()
     bytes = 0
     jump = 0
@@ -228,11 +228,11 @@ def TestPutGetAcc1(g_a, n, chunk, buf, lo, hi, local):
         else:
             time.sleep(1)
         if 0 == me:
-            print '%7d %7d %8.3e %8.3e %8.3e %8.3e %8.3e %8.3e' % (
+            print('%7d %7d %8.3e %8.3e %8.3e %8.3e %8.3e %8.3e' % (
                     bytes, chunk[loop],
                     tg/1e-6, 1e-6*bytes/tg,
                     tp/1e-6, 1e-6*bytes/tp,
-                    ta/1e-6, 1e-6*bytes/ta)
+                    ta/1e-6, 1e-6*bytes/ta))
 
 def time_get1(g_a, lo, hi, buf, chunk, jump, local):
     count = 0

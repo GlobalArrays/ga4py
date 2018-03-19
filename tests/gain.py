@@ -268,7 +268,7 @@ def print_result(result_np,result_gain,diff):
         _result_np = result_np.copy()
     else:
         _result_np = result_np
-    print """%s
+    print("""%s
 ---------------------- numpy ---------------------------------
 %s
 %s
@@ -285,7 +285,7 @@ def print_result(result_np,result_gain,diff):
 """ % (RED,
     type(result_np),   _dtype(result_np),   _shape(result_np),   _result_np,
     type(result_gain), _dtype(result_gain), _shape(result_gain),  result_gain,
-    diff, RESET)
+    diff, RESET))
 
 def run_tests():
     global m
@@ -296,13 +296,13 @@ def run_test(test):
     global passes,x_failures,np_failures,gain_failures,epic_failures
     # sanity check that the test is correctly written
     if test.count("result") < 1:
-        raise SyntaxError, "TEST ERROR: %s" % test
+        raise SyntaxError("TEST ERROR: %s" % test)
     # clean up whitespace and pretty print the test string
     test_lines = [line.strip() for line in test.splitlines()]
     test = '\n'.join(test_lines)
     if PREPRINT:
-        print " TESTING:"
-        print '    ' + '\n    '.join(test_lines)
+        print(" TESTING:")
+        print('    ' + '\n    '.join(test_lines))
     any_err = False
     e_np = None
     e_gain = None
@@ -312,16 +312,16 @@ def run_test(test):
     m = np
     # some temporary labels for results
     try:
-        exec test
+        exec(test)
         result_np = result
-    except Exception,e:
+    except Exception as e:
         e_np = e
         tb_np = sys.exc_info()
     m = gain
     try:
-        exec test
+        exec(test)
         result_gain = result
-    except Exception,e:
+    except Exception as e:
         e_gain = e
         tb_gain = sys.exc_info()
     # sync now since most operations sync on the way in, not on the way out
@@ -348,55 +348,55 @@ def run_test(test):
                 print_result(result_np,result_gain,diff)
                 err = True
             if not (_dtype(result_np) == _dtype(result_gain)):
-                print RED + "different types np=%s gain=%s" % (
-                        _dtype(result_np), _dtype(result_gain)) + RESET
+                print(RED + "different types np=%s gain=%s" % (
+                        _dtype(result_np), _dtype(result_gain)) + RESET)
                 err = True
-        except Exception,e:
-            print "%scaught exception: %s%s" % (RED,e,RESET)
+        except Exception as e:
+            print("%scaught exception: %s%s" % (RED,e,RESET))
             hard_err = True
             hard_err_tb = sys.exc_info()
         if hard_err:
-            print " RESULT: %sEPIC FAIL%s" % (RED,RESET)
-            print "".join(traceback.format_exception(*hard_err_tb))
+            print(" RESULT: %sEPIC FAIL%s" % (RED,RESET))
+            print("".join(traceback.format_exception(*hard_err_tb)))
             epic_failures += 1
             any_err = True
         elif err:
-            print " RESULT: %sFAIL%s" % (RED,RESET)
+            print(" RESULT: %sFAIL%s" % (RED,RESET))
             gain_failures += 1
             any_err = True
         else:
-            #print " RESULT: %sPASS%s" % (GREEN,RESET)
+            #print(" RESULT: %sPASS%s" % (GREEN,RESET))
             passes += 1
     elif e_np is None:
-        print " RESULT: %sFAIL -- gain exception only: %s%s" % (
-                RED,e_gain,RESET)
-        print "".join(traceback.format_exception(*tb_gain))
+        print(" RESULT: %sFAIL -- gain exception only: %s%s" % (
+                RED,e_gain,RESET))
+        print("".join(traceback.format_exception(*tb_gain)))
         gain_failures += 1
         any_err = True
     elif e_gain is None:
-        print " RESULT: %sFAIL -- numpy exception only: %s%s" % (
-                RED,e_np,RESET)
-        print "".join(traceback.format_exception(*tb_np))
+        print(" RESULT: %sFAIL -- numpy exception only: %s%s" % (
+                RED,e_np,RESET))
+        print("".join(traceback.format_exception(*tb_np)))
         np_failures += 1
         any_err = True
     else: # both errors are set
         if str(e_np) != str(e_gain):
-            print " RESULT: %sFAIL (dffering exceptions)%s" % (RED,RESET)
-            print "   %snp:%s'%s'%s" % (RED,type(e_np),e_np,RESET)
-            print " %sgain:%s'%s'%s" % (RED,type(e_gain),e_gain,RESET)
-            print " --- NumPy traceback ---"
-            print "".join(traceback.format_exception(*tb_np))
-            print " --- GAiN traceback ---"
-            print "".join(traceback.format_exception(*tb_gain))
+            print(" RESULT: %sFAIL (dffering exceptions)%s" % (RED,RESET))
+            print("   %snp:%s'%s'%s" % (RED,type(e_np),e_np,RESET))
+            print(" %sgain:%s'%s'%s" % (RED,type(e_gain),e_gain,RESET))
+            print(" --- NumPy traceback ---")
+            print("".join(traceback.format_exception(*tb_np)))
+            print(" --- GAiN traceback ---")
+            print("".join(traceback.format_exception(*tb_gain)))
             gain_failures += 1
         else:
-            #print " RESULT: %sXFAIL%s" % (GREEN,RESET)
-            xfailures += 1
+            #print(" RESULT: %sXFAIL%s" % (GREEN,RESET))
+            x_failures += 1
         any_err = True
     if any_err:
-        print "TEST WAS: %s" % test_lines[0]
+        print("TEST WAS: %s" % test_lines[0])
         for line in test_lines[1:]:
-            print "         %s" % line
+            print("         %s" % line)
 
 if __name__ == '__main__':
     profile = False
@@ -417,7 +417,7 @@ if __name__ == '__main__':
         RESET = ""
     if profile:
         import cProfile
-        print "Profiling enabled"
+        print("Profiling enabled")
         cProfile.run("run_tests()", "gaintest.%s.prof" % str(me()))
     elif use_groups:
         midproc = nproc()//2
@@ -435,14 +435,14 @@ if __name__ == '__main__':
             run_tests()
         ga.pgroup_set_default(ga.pgroup_get_world())
         sync()
-        print "All done with groups"
+        print("All done with groups")
     else:
         run_tests()
-    print ""
-    print "%s           Passed: %s%s" % (GREEN,passes,RESET)
-    print "%sExpected Failures: %s%s" % (GREEN,x_failures,RESET)
-    print "%s   NumPy Failures: %s%s" % (YELLOW,np_failures,RESET)
-    print "%s    GAiN Failures: %s%s" % (RED,gain_failures,RESET)
-    print "%s    Epic Failures: %s%s" % (RED,epic_failures,RESET)
+    print("")
+    print("%s           Passed: %s%s" % (GREEN,passes,RESET))
+    print("%sExpected Failures: %s%s" % (GREEN,x_failures,RESET))
+    print("%s   NumPy Failures: %s%s" % (YELLOW,np_failures,RESET))
+    print("%s    GAiN Failures: %s%s" % (RED,gain_failures,RESET))
+    print("%s    Epic Failures: %s%s" % (RED,epic_failures,RESET))
     if not me():
         ga.print_stats()

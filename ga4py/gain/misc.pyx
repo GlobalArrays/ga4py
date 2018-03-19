@@ -415,7 +415,7 @@ def arange(start, stop=None, step=None, dtype=None, shape=None):
     
     """
     if step == 0:
-        raise ValueError, "step size of 0 not allowed"
+        raise ValueError("step size of 0 not allowed")
     if not step:
         step = 1
     if not stop:
@@ -440,7 +440,7 @@ def arange(start, stop=None, step=None, dtype=None, shape=None):
     if shape is not None:
         shape = np.asarray(shape,dtype=np.int64)
         if np.prod(shape) != length:
-            raise ValueError, "total size of new array must be unchanged"
+            raise ValueError("total size of new array must be unchanged")
         a = ndarray(shape, dtype)
         a_local = a.access()
         if a_local is not None:
@@ -448,7 +448,7 @@ def arange(start, stop=None, step=None, dtype=None, shape=None):
             lshape = hi-lo
             v = np.add.reduce(
                     (np.indices(lshape).reshape(len(lshape),-1).T + lo)
-                    * (np.asarray(a.strides)/a.itemsize), axis=1)
+                    * (np.asarray(a.strides)//a.itemsize), axis=1)
             a_local.flat = v*step + start
             a.release_update()
     else:
@@ -532,9 +532,9 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False):
     a = ndarray(num)
     step = None
     if endpoint:
-        step = (stop-start)/(num-1)
+        step = (stop-start)//(num-1)
     else:
-        step = (stop-start)/num
+        step = (stop-start)//num
     buf = a.access()
     if buf is not None:
         lo,hi = a.distribution()
@@ -620,9 +620,9 @@ def logspace(start, stop, num=50, endpoint=True, base=10.0):
     a = ndarray(num)
     step = None
     if endpoint:
-        step = (stop-start)/(num-1)
+        step = (stop-start)//(num-1)
     else:
-        step = (stop-start)/num
+        step = (stop-start)//num
     buf = a.access()
     if buf is not None:
         lo,hi = a.distribution()
@@ -708,7 +708,7 @@ def dot(a, b, out=None):
     if ((isinstance(a,flatiter) or a.ndim == 1)
             and (isinstance(b,flatiter) or b.ndim == 1)):
         if len(a) != len(b):
-            raise ValueError, "objects are not aligned"
+            raise ValueError("objects are not aligned")
         tmp = multiply(a,b)
         ndtmp = tmp.access()
         local_sum = None
@@ -719,7 +719,7 @@ def dot(a, b, out=None):
         return ga.gop_add(local_sum)
     elif a.ndim == 2 and b.ndim == 2:
         if a.shape[1] != b.shape[0]:
-            raise ValueError, "objects are not aligned"
+            raise ValueError("objects are not aligned")
         # use GA gemm if certain conditions apply
         valid_types = [np.dtype(np.float32),
                 np.dtype(np.float64),
@@ -735,8 +735,8 @@ def dot(a, b, out=None):
             raise NotImplementedError
     elif isinstance(a,(ndarray,flatiter)) and isinstance(b,(ndarray,flatiter)):
         if a.shape[1] != b.shape[0]:
-            raise ValueError, "objects are not aligned"
-        raise NotImplementedError, "arbitrary dot"
+            raise ValueError("objects are not aligned")
+        raise NotImplementedError("arbitrary dot")
     else:
         # assume we have a scalar somewhere, so just multiply
         return multiply(a,b)
@@ -791,7 +791,7 @@ def diag(v, k=0):
     """
     v = asarray(v)
     if isinstance(v, ndarray):
-        raise NotImplementedError, "TODO"
+        raise NotImplementedError("TODO")
         # the following isn't right.
         # We want to scatter the values from the given diagonal into a brand
         # new distributed array, but how to compute the indices for the
@@ -817,7 +817,7 @@ def diag(v, k=0):
         #elif v.ndim == 2:
         #    pass
         #else:
-        #    raise ValueError, "Input must be 1- or 2-d."
+        #    raise ValueError("Input must be 1- or 2-d.")
     else:
         return np.diag(v,k)
 
@@ -887,9 +887,9 @@ def clip(a, a_min, a_max, out=None):
         out = ndarray(a_shape, get_dtype(a))
     # sanity checks
     if not is_array(out):
-        raise TypeError, "output must be an array"
+        raise TypeError("output must be an array")
     if out.shape != a.shape:
-        raise ValueError, ("clip: Output array must have thesame shape as "
+        raise ValueError("clip: Output array must have thesame shape as "
                 "the input.")
     # Now figure out what to do...
     if isinstance(out, ndarray):
@@ -929,7 +929,7 @@ def clip(a, a_min, a_max, out=None):
             out.release_update()
         #sync()
     elif isinstance(out, flatiter):
-        raise NotImplementedError, "flatiter version of clip"
+        raise NotImplementedError("flatiter version of clip")
         #sync()
         ## first op: first and second and out are same object
         #if first is second is out:

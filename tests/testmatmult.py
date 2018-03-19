@@ -38,8 +38,8 @@ try:
     from scipy.linalg.fblas import dgemm
 except:
     if VERIFY and 0 == me:
-        print "WARNING: VERIFY=True but scipy's dgemm not available"
-        print "         ga.gemm will not be verified"
+        print("WARNING: VERIFY=True but scipy's dgemm not available")
+        print("         ga.gemm will not be verified")
     VERIFY = False
 
 # This was used to debug as it makes printed numpy arrays a bit easier to read
@@ -103,11 +103,11 @@ def main():
         ga.sync()
 
         if 0 == me:
-            print '\nMatrix Multiplication C = A[%d,%d] x B[%d,%d]\n' % (
-                    num_m, num_k, num_k, num_n)
-            print ' %4s  %12s  %12s  %7s  %7s'%(
+            print('\nMatrix Multiplication C = A[%d,%d] x B[%d,%d]\n' % (
+                    num_m, num_k, num_k, num_n))
+            print(' %4s  %12s  %12s  %7s  %7s'%(
                     "Run#", "Time (seconds)", "mflops/proc",
-                    "A trans", "B trans")
+                    "A trans", "B trans"))
         avg_t[:] = 0
         avg_mf[:] = 0
         for itime in range(ntimes):
@@ -122,19 +122,19 @@ def main():
                     mf = 2*num_m*num_n*num_k/t1*10**-6/nproc
                     avg_t[i] += t1
                     avg_mf[i] += mf
-                    print ' %4d  %12.4f  %12.1f  %7s  %7s'%(
-                            itime+1, t1, mf, ta, tb)
+                    print(' %4d  %12.4f  %12.1f  %7s  %7s'%(
+                            itime+1, t1, mf, ta, tb))
                     if VERIFY and itime == 0:
                         verify_ga_gemm(ta, tb, num_m, num_n, num_k,
                                 1.0, g_a, g_b, 0.0, g_c)
         if 0 == me:
-            print ''
+            print('')
             for i in range(ntrans):
-                print 'Average: %12.4f seconds %12.1f mflops/proc %s %s'%(
+                print('Average: %12.4f seconds %12.1f mflops/proc %s %s'%(
                             avg_t[i]/ntimes, avg_mf[i]/ntimes,
-                            transa[i], transb[i])
+                            transa[i], transb[i]))
             if VERIFY:
-                print 'All ga.gemms are verified...O.K.'
+                print('All ga.gemms are verified...O.K.')
 
 def load_ga(handle, h0, num_m, num_k):
     if True:
@@ -159,7 +159,7 @@ def verify_ga_gemm(ta, tb, num_m, num_n, num_k, alpha, g_a, g_b, beta, g_c):
     elif ta and tb:
         result = dgemm(alpha, tmpa, tmpb, beta=beta, trans_a=ta, trans_b=tb)
     else:
-        raise ValueError, "shouldn't get here"
+        raise ValueError("shouldn't get here")
     abs_value = np.abs(tmpc-result)
     if np.any(abs_value > 1):
         ga.error('verify ga.gemm failed')

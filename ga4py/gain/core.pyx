@@ -8,6 +8,7 @@ import util
 import numpy as np
 cimport numpy as np
 import os
+import functools
 
 cpdef int me():
     return ga.pgroup_nodeid(ga.pgroup_get_default())
@@ -123,7 +124,7 @@ class flagsobj(object):
                 return self._a
             if item == "U" or item == "UPDATEIFCOPY":
                 return self._u
-        raise KeyError, "Unknown flag"
+        raise KeyError("Unknown flag")
     def __repr__(self):
         return """  C_CONTIGUOUS : %s
   F_CONTIGUOUS : %s
@@ -148,9 +149,10 @@ class GlobalArrayCache(object):
         self.level = level
 
     def __del__(self):
-        for value in self.cache.values():
-            for g_a in value:
-                ga.destroy(g_a)
+        if ga is not None:
+            for value in self.cache.values():
+                for g_a in value:
+                    ga.destroy(g_a)
 
     def __contains__(self, item):
         return (item in self.cache and self.cache[item])
@@ -158,7 +160,7 @@ class GlobalArrayCache(object):
     def __getitem__(self, item):
         if item in self.cache and self.cache[item]:
             return self.cache[item].pop()
-        raise KeyError, item
+        raise KeyError(item)
 
     def __setitem__(self, item, value):
         if item in self.cache:
@@ -343,11 +345,11 @@ class ndarray(object):
             strides=None, order=None, base=None):
         shape = tuplify(shape)
         if order not in [None,'C','F']:
-            raise TypeError, "order not understood"
+            raise TypeError("order not understood")
         if order is None:
             order = 'C'
         if order is 'F':
-            raise NotImplementedError, "Fortran order not supported"
+            raise NotImplementedError("Fortran order not supported")
         self._dtype = np.dtype(dtype)
         self._order = order
         self._base = base
@@ -540,7 +542,7 @@ class ndarray(object):
             elif isinstance(gs, util.FixedKey):
                 pass
             else:
-                raise TypeError, "unhandled piece of global_slice"
+                raise TypeError("unhandled piece of global_slice")
         # modify new index array based on global_slice
         new_i = (i*np.asarray(step,dtype=np.int64)[None,:]
                 + np.asarray(start, dtype=np.int64)[None,:])
@@ -561,9 +563,9 @@ class ndarray(object):
                 # skip column
                 pass
             elif isinstance(gs, util.FixedKey):
-                raise TypeError, "FixedKey found in MasterKey"
+                raise TypeError("FixedKey found in MasterKey")
             else:
-                raise TypeError, "unhandled piece of global_slice"
+                raise TypeError("unhandled piece of global_slice")
         new_i = np.hstack(new_columns)
         return ga.gather(self.handle, new_i)
 
@@ -613,7 +615,7 @@ class ndarray(object):
             return ret
     def _set_imag(self, value):
         if self._dtype.kind != 'c':
-            raise TypeError, "array does not have imaginary part to set"
+            raise TypeError("array does not have imaginary part to set")
         else:
             self._get_imag()[:] = value
     imag = property(_get_imag,_set_imag)
@@ -631,7 +633,7 @@ class ndarray(object):
     real = property(_get_real,_set_real)
 
     def _get_size(self):
-        return reduce(lambda x,y: x*y, self.shape, 1)
+        return functools.reduce(lambda x,y: x*y, self.shape, 1)
     size = property(_get_size)
 
     def _get_itemsize(self):
@@ -659,7 +661,7 @@ class ndarray(object):
             self._strides = a.strides
             self._flags = a._flags
         else:
-            raise AttributeError, "incompatible shape for a non-contiguous array"
+            raise AttributeError("incompatible shape for a non-contiguous array")
     shape = property(_get_shape, _set_shape)
 
     def _get_strides(self):
@@ -670,7 +672,7 @@ class ndarray(object):
     strides = property(_get_strides)
 
     def _get_ctypes(self):
-        raise NotImplementedError, "TODO"
+        raise NotImplementedError("TODO")
     ctypes = property(_get_ctypes)
 
     def _get_base(self):
@@ -947,9 +949,9 @@ class ndarray(object):
 
         """
         if self.ndim < 2:
-            raise ValueError, "array.ndim must be >= 2"
+            raise ValueError("array.ndim must be >= 2")
         if self.ndim != 2:
-            raise NotImplementedError, "diagonal for a.ndim > 2"
+            raise NotImplementedError("diagonal for a.ndim > 2")
         nrow,ncol = self.shape
         if offset >= 0:
             size = min(ncol-offset,nrow)
@@ -957,7 +959,7 @@ class ndarray(object):
             size = min(nrow+offset,ncol)
         out = ndarray(size, dtype=self.dtype)
         if not is_distributed(out):
-            raise NotImplementedError, "resulting diagonal is not distributed"
+            raise NotImplementedError("resulting diagonal is not distributed")
         npout = out.access()
         if npout is not None:
             indices = np.empty((size,2), dtype=np.int64)
@@ -1441,11 +1443,11 @@ class ndarray(object):
         shape = np.asarray(shape, dtype=np.int64)
         count_neg_ones = shape[shape==-1].size
         if count_neg_ones > 1:
-            raise ValueError, "can only specify one unknown dimension"
+            raise ValueError("can only specify one unknown dimension")
         if count_neg_ones == 1:
             shape_product = np.prod(shape)*(-1)
             if np.size%shape_product != 0:
-                raise ValueError, "total size of new array must be unchanged"
+                raise ValueError("total size of new array must be unchanged")
             shape[shape==-1] = np.size//shape_product
         # now that shape is established, create new array
         a = ndarray(shape, dtype=self.dtype)
@@ -1984,12 +1986,12 @@ class ndarray(object):
             elif isinstance(axes[0], tuple):
                 axes = axes[0]
             else:
-                raise ValueError, "invalid axis for this array"
+                raise ValueError("invalid axis for this array")
         else:
             # assume axes is a tuple of ints
             axes = np.asarray(axes, dtype=np.int64)
         if len(axes) != self.ndim:
-            raise ValueError, "axes don't match array"
+            raise ValueError("axes don't match array")
         ret.global_slice = self.global_slice.transpose(axes)
         return ret
 
@@ -2131,7 +2133,7 @@ class ndarray(object):
     #def __delattr__
 
     def __delitem__(self, *args, **kwargs):
-        raise ValueError, "cannot delete array elements"
+        raise ValueError("cannot delete array elements")
 
     #def __delslice__
 
@@ -2163,9 +2165,9 @@ class ndarray(object):
     def __getitem__(self, key):
         # THIS IS A COLLECTIVE OPERATION
         if isinstance(key, (str,unicode)):
-            raise NotImplementedError, "str or unicode key"
+            raise NotImplementedError("str or unicode key")
         if self.ndim == 0:
-            raise IndexError, "0-d arrays can't be indexed"
+            raise IndexError("0-d arrays can't be indexed")
         key = listify(key)
         fancy = False
         for arg in key:
@@ -2173,7 +2175,7 @@ class ndarray(object):
                 fancy = True
                 break
         if fancy:
-            raise NotImplementedError, "TODO: fancy indexing"
+            raise NotImplementedError("TODO: fancy indexing")
         new_global_slice = self.global_slice[key]
         new_shape = new_global_slice.shape
         a = ndarray(new_shape, self.dtype, base=self)
@@ -2217,7 +2219,7 @@ class ndarray(object):
 
     def __int__(self, *args, **kwargs):
         if self.size != 1:
-            raise TypeError, "only length-1 arrays can be converted to Python scalars"
+            raise TypeError("only length-1 arrays can be converted to Python scalars")
         t=np.dtype(np.int32)
         return t.type(self.allget())
 
@@ -2273,7 +2275,7 @@ class ndarray(object):
         return negative(self)
 
     def __nonzero__(self):
-        raise ValueError, ("The truth value of an array with more than one"
+        raise ValueError("The truth value of an array with more than one"
             " element is ambiguous. Use a.any() or a.all()")
 
     def __oct__(self, *args, **kwargs):
@@ -2354,9 +2356,9 @@ class ndarray(object):
         # THIS IS A COLLECTIVE OPERATION
         sync()
         if isinstance(key, (str,unicode)):
-            raise NotImplementedError, "str or unicode key"
+            raise NotImplementedError("str or unicode key")
         if self.ndim == 0:
-            raise IndexError, "0-d arrays can't be indexed"
+            raise IndexError("0-d arrays can't be indexed")
         key = listify(key)
         fancy = False
         for arg in key:
@@ -2364,7 +2366,7 @@ class ndarray(object):
                 fancy = True
                 break
         if fancy:
-            raise NotImplementedError, "TODO: fancy indexing"
+            raise NotImplementedError("TODO: fancy indexing")
         global_slice = self.global_slice[key]
         new_shape = global_slice.shape
         value = asarray(value)
@@ -2535,7 +2537,7 @@ class ufunc(object):
         elif self.func.nin == 2:
             return self._binary_call(*args, **kwargs)
         else:
-            raise ValueError, "only unary and binary ufuncs supported"
+            raise ValueError("only unary and binary ufuncs supported")
 
     def _unary_call(self, input, out=None, *args, **kwargs):
         input = asarray(input)
@@ -2552,11 +2554,11 @@ class ufunc(object):
             out = ndarray(input_shape, out_type)
         # sanity checks
         if not is_array(out):
-            raise TypeError, "return arrays must be of ArrayType"
+            raise TypeError("return arrays must be of ArrayType")
         out_shape = get_shape(out)
         if input_shape != out_shape:
             # broadcasting doesn't apply to unary operations
-            raise ValueError, 'invalid return array shape'
+            raise ValueError('invalid return array shape')
         # Now figure out what to do...
         if isinstance(out, ndarray):
             sync()
@@ -2635,7 +2637,7 @@ class ufunc(object):
             out = ndarray(shape, dtype)
         # sanity checks
         if not is_array(out):
-            raise TypeError, "return arrays must be of ArrayType"
+            raise TypeError("return arrays must be of ArrayType")
         # Now figure out what to do...
         if isinstance(out, ndarray):
             sync()
@@ -2770,7 +2772,7 @@ class ufunc(object):
 
         """
         if self.func.nin != 2:
-            raise ValueError, "reduce only supported for binary functions"
+            raise ValueError("reduce only supported for binary functions")
         a = asarray(a)
         if not (isinstance(a, ndarray) or isinstance(out, ndarray)):
             # no ndarray instances used, pass through immediately to numpy
@@ -2778,7 +2780,7 @@ class ufunc(object):
         if axis < 0:
             axis += a.ndim
         if a.ndim < axis < 0:
-            raise ValueError, "axis not in array"
+            raise ValueError("axis not in array")
         if out is None:
             shape = list(a.shape)
             del shape[axis]
@@ -2888,7 +2890,7 @@ class ufunc(object):
             slicer = [slice(0,None,None)]*a.ndim
             axis_iterator = iter(xrange(a.shape[axis]))
             # copy first loop iteration to 'out'
-            slicer[axis] = axis_iterator.next()
+            slicer[axis] = next(axis_iterator)
             out[:] = a[slicer]
             # remaining loop iterations are appropriately reduced
             for i in axis_iterator:
@@ -2899,7 +2901,7 @@ class ufunc(object):
 
     def accumulate(self, a, axis=0, dtype=None, out=None, *args, **kwargs):
         if self.func.nin != 2:
-            raise ValueError, "accumulate only supported for binary functions"
+            raise ValueError("accumulate only supported for binary functions")
         a = asarray(a)
         if not (isinstance(a, ndarray) or isinstance(out, ndarray)):
             # no ndarray instances used, pass through immediately to numpy
@@ -2907,7 +2909,7 @@ class ufunc(object):
         if axis < 0:
             axis += a.ndim
         if a.ndim < axis < 0:
-            raise ValueError, "axis not in array"
+            raise ValueError("axis not in array")
         if out is None:
             if dtype is None:
                 dtype = a.dtype
@@ -2942,7 +2944,7 @@ class ufunc(object):
             slicer_i_1 = [slice(0,None,None)]*a.ndim
             axis_iterator = iter(xrange(a.shape[axis]))
             # copy first loop iteration to 'out'
-            slicer_i[axis] = axis_iterator.next()
+            slicer_i[axis] = next(axis_iterator)
             out[slicer_i] = a[slicer_i]
             # remaining loop iterations are appropriately accumulated
             for i in axis_iterator:
@@ -2957,12 +2959,12 @@ class ufunc(object):
 
     def outer(self, *args, **kwargs):
         if self.func.nin != 2:
-            raise ValueError, "outer product only supported for binary functions"
+            raise ValueError("outer product only supported for binary functions")
         raise NotImplementedError
 
     def reduceat(self, *args, **kwargs):
         if self.func.nin != 2:
-            raise ValueError, "reduceat only supported for binary functions"
+            raise ValueError("reduceat only supported for binary functions")
         raise NotImplementedError
 
 # unary ufuncs
@@ -3187,7 +3189,7 @@ class flatiter(object):
         sync()
         if isinstance(key, (list,tuple)):
             if len(key) > 1:
-                raise IndexError, "unsupported iterator index"
+                raise IndexError("unsupported iterator index")
         # TODO optimize the gather since this is a collective
         return self.allget(key)
 
@@ -3252,10 +3254,13 @@ class flatiter(object):
         else:
             raise StopIteration
 
+    def __next__(self):
+        return self.next()
+
     def access(self):
         """Return a copy of a 'local' portion."""
         if self._values is not None:
-            raise ValueError, "call release or release_update before access"
+            raise ValueError("call release or release_update before access")
         if not self.owns():
             self._values = None
         else:
@@ -3393,10 +3398,10 @@ def print_sync(what):
     if True:
         sync()
         if 0 == me():
-            print "[0] %s" % str(what)
+            print("[0] %s" % str(what))
             for proc in xrange(1,nproc()):
                 data = comm().recv(source=proc, tag=11)
-                print "[%d] %s" % (proc, str(data))
+                print("[%d] %s" % (proc, str(data)))
         else:
             comm().send(what, dest=0, tag=11)
         sync()

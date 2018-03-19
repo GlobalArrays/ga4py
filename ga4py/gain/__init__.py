@@ -1,6 +1,6 @@
 import mpi4py.MPI
-from core import *
-from misc import *
+from ga4py.gain.core import *
+from ga4py.gain.misc import *
 import random
 
 if __name__ != '__main__':
